@@ -58,8 +58,10 @@ class ScrapeBbcFood extends Command
                         'source_url'  => $recipeData['source_url'],
                     ]);
 
-                    $show = Show::firstOrCreate([ 'name' => $recipeData['show'], ]);
-                    $recipe->show()->attach($show->id);
+                    if (! is_null($recipeData['show'])) {
+                        $show = Show::firstOrCreate([ 'name' => $recipeData['show'], ]);
+                        $recipe->show()->attach($show->id);
+                    }
 
                     $chef = Chef::firstOrCreate([
                         'name'  => $recipeData['chef']['name'],
@@ -205,7 +207,9 @@ class ScrapeBbcFood extends Command
 
     protected function show()
     {
-        return $this->crawler->filter('.recipe-chef .chef .chef__about .chef__programme-name .chef__link')->first()->text();
+        $show = $this->crawler->filter('.recipe-chef .chef .chef__about .chef__programme-name .chef__link');
+        
+        return $show->count() ? $show->first()->text() : null;
     }
 
 
