@@ -96,10 +96,11 @@ class ScrapeBbcFood extends Command
 
                     $this->info(sprintf('[%s] Processed recipe %s', date('Y-m-d H:i:s'), $recipe->name));
                 } catch (\Exception $e) {
-                    $this->info(sprintf('[%s] Exception parsing data. Retrying later.', date('Y-m-d H:i:s')), [
-                        'exception'  => $e->getMessage(),
-                        'recipe_url' => $recipeUrl,
-                    ]);
+                    $this->info(sprintf('[%s] Exception parsing data [%s]. Retrying later [%s].',
+                        date('Y-m-d H:i:s'),
+                        $e->getMessage(),
+                        $recipeUrl
+                    ));
                 }
             });
     }
@@ -132,7 +133,8 @@ class ScrapeBbcFood extends Command
             return false;
         }
 
-        $this->crawler = new Crawler($response);
+        $this->crawler = new Crawler;
+        $this->crawler->addHtmlContent($response);
 
         $recipe = [
             'source_url'  => $recipeUrl,
