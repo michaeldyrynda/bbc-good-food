@@ -2,10 +2,13 @@
 
 namespace App;
 
+use Iatstuti\Database\Support\NullableFields;
 use Illuminate\Database\Eloquent\Model;
 
 class Recipe extends Model
 {
+    use NullableFields;
+
     protected $fillable = [ 'name', 'image_url', 'description', 'fingerprint', 'source_url', ];
 
     protected $nullable = [ 'image_url', 'description', ];
