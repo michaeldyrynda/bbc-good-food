@@ -14,8 +14,11 @@ class CreateRecipesTable extends Migration
     {
         Schema::create('recipes', function (Blueprint $table) {
             $table->increments('id');
+            $table->string('name');
+            $table->string('image_url')->nullable();
+            $table->text('description')->nullable();
             $table->string('fingerprint');
-            $table->string('title');
+            $table->string('source_url');
             $table->timestamps();
         });
     }

@@ -14,8 +14,9 @@ class CreateMethodsTable extends Migration
     {
         Schema::create('methods', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('recipe_id');
+            $table->integer('recipe_id')->unsigned();
             $table->text('body');
+            $table->integer('sort_order')->unsigned();
             $table->timestamps();
         });
     }

@@ -2,6 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Chef;
+use App\IngredientSection;
+use App\Metadata;
+use App\Recipe;
+use App\Show;
 use Illuminate\Console\Command;
 use Symfony\Component\DomCrawler\Crawler;
 
@@ -40,11 +45,56 @@ class ScrapeBbcFood extends Command
      */
     public function handle()
     {
-        $this->filterRecipes($this->fetchSitemap())->each(function ($recipeUrl) {
-            return $this->parseRecipeData($recipeUrl);
-        })->each(function ($recipe) {
-            $recipe;
-        });
+        $this->filterRecipes($this->fetchSitemap())
+            ->reject(function ($recipeUrl) {
+                return Recipe::where('source_url', $recipeUrl)->exists();
+            })->each(function ($recipeUrl) {
+                $recipeData = $this->parseRecipeData($recipeUrl);
+
+                $recipe = Recipe::create([
+                    'name'        => $recipeData['name'],
+                    'fingerprint' => $recipeData['fingerprint'],
+                    'source_url'  => $recipeData['source_url'],
+                ]);
+
+                $show = Show::firstOrCreate([ 'name' => $recipeData['show'], ]);
+                $recipe->show()->attach($show->id);
+
+                $chef = Chef::firstOrCreate([
+                    'name'  => $recipeData['chef']['name'],
+                    'image' => $recipeData['chef']['image'],
+                ]);
+                $recipe->chef()->attach($chef->id);
+
+                collect($recipeData['metadata'])->each(function ($item, $key) use ($recipe) {
+                    $metadata = Metadata::firstOrCreate([ 'label' => $key, ]);
+                    $recipe->metadata()->attach($metadata->id, [ 'value' => $item, ]);
+                });
+
+                $sort = 0;
+
+                collect($recipeData['ingredients'])->each(function ($item, $key) use ($recipe, &$sort) {
+                    $section = IngredientSection::firstOrCreate([
+                        'recipe_id'  => $recipe->id,
+                        'label'      => $key,
+                        'sort_order' => $sort,
+                    ]);
+                    
+                    collect($item)->each(function ($ingredient) use ($section) {
+                        $section->ingredients()->create([ 'body' => $ingredient, ]);
+                    });
+
+                    $section->recipe()->associate($recipe)->save();
+
+                    $sort++;
+                });
+
+                collect($recipeData['method'])->each(function ($item, $key) use ($recipe) {
+                    $recipe->method()->create([ 'body' => $item, 'sort_order' => $key, ]);
+                });
+
+                $this->info(sprintf('[%s] Processed recipe %s', date('Y-m-d H:i:s'), $recipe->name));
+            });
     }
 
 
@@ -78,7 +128,10 @@ class ScrapeBbcFood extends Command
         $this->crawler = new Crawler($response);
 
         $recipe = [
-            'title'       => $this->title(),
+            'source_url'  => $recipeUrl,
+            'name'        => $this->title(),
+            'image'       => $this->image(),
+            'description' => $this->description(),
             'metadata'    => $this->metadata(),
             'chef'        => $this->chef(),
             'show'        => $this->show(),
@@ -95,6 +148,22 @@ class ScrapeBbcFood extends Command
     protected function title()
     {
         return $this->crawler->filter('.content-title__text')->text();
+    }
+
+
+    protected function image()
+    {
+        $image = $this->crawler->filter('.recipe-media .recipe-media__image');
+
+        return $image->count() ? $image->attr('src') : null;
+    }
+
+
+    protected function description()
+    {
+        $description = $this->crawler->filter('.recipe-media .recipe-description .recipe-description__text');
+
+        return $description->count() ? trim($description->text()) : null;
     }
 
 

@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Recipe extends Model
 {
-    protected $fillable = [ 'fingerprint' , 'title' ];
+    protected $fillable = [ 'name', 'image_url', 'description', 'fingerprint', 'source_url', ];
+
+    protected $nullable = [ 'image_url', 'description', ];
 
     public function chef()
     {
@@ -20,9 +22,26 @@ class Recipe extends Model
     }
 
 
-    public function methods()
+    public function method()
     {
-        return $this->hasMany(Method::class);
+        return $this->hasMany(Method::class)->orderBy('sort_order');
     }
 
+
+    public function ingredient_sections()
+    {
+        return $this->hasMany(IngredientSection::class);
+    }
+
+
+    public function ingredients()
+    {
+        return $this->hasManyThrough(Ingredient::class, IngredientSection::class);
+    }
+
+
+    public function metadata()
+    {
+        return $this->belongsToMany(Metadata::class)->withPivot('value');
+    }
 }
