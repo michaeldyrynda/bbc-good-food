@@ -49,51 +49,58 @@ class ScrapeBbcFood extends Command
             ->reject(function ($recipeUrl) {
                 return Recipe::where('source_url', $recipeUrl)->exists();
             })->each(function ($recipeUrl) {
-                $recipeData = $this->parseRecipeData($recipeUrl);
+                try {
+                    $recipeData = $this->parseRecipeData($recipeUrl);
 
-                $recipe = Recipe::create([
-                    'name'        => $recipeData['name'],
-                    'fingerprint' => $recipeData['fingerprint'],
-                    'source_url'  => $recipeData['source_url'],
-                ]);
-
-                $show = Show::firstOrCreate([ 'name' => $recipeData['show'], ]);
-                $recipe->show()->attach($show->id);
-
-                $chef = Chef::firstOrCreate([
-                    'name'  => $recipeData['chef']['name'],
-                    'image' => $recipeData['chef']['image'],
-                ]);
-                $recipe->chef()->attach($chef->id);
-
-                collect($recipeData['metadata'])->each(function ($item, $key) use ($recipe) {
-                    $metadata = Metadata::firstOrCreate([ 'label' => $key, ]);
-                    $recipe->metadata()->attach($metadata->id, [ 'value' => $item, ]);
-                });
-
-                $sort = 0;
-
-                collect($recipeData['ingredients'])->each(function ($item, $key) use ($recipe, &$sort) {
-                    $section = IngredientSection::firstOrCreate([
-                        'recipe_id'  => $recipe->id,
-                        'label'      => $key,
-                        'sort_order' => $sort,
+                    $recipe = Recipe::create([
+                        'name'        => $recipeData['name'],
+                        'fingerprint' => $recipeData['fingerprint'],
+                        'source_url'  => $recipeData['source_url'],
                     ]);
-                    
-                    collect($item)->each(function ($ingredient) use ($section) {
-                        $section->ingredients()->create([ 'body' => $ingredient, ]);
+
+                    $show = Show::firstOrCreate([ 'name' => $recipeData['show'], ]);
+                    $recipe->show()->attach($show->id);
+
+                    $chef = Chef::firstOrCreate([
+                        'name'  => $recipeData['chef']['name'],
+                        'image' => $recipeData['chef']['image'],
+                    ]);
+                    $recipe->chef()->attach($chef->id);
+
+                    collect($recipeData['metadata'])->each(function ($item, $key) use ($recipe) {
+                        $metadata = Metadata::firstOrCreate([ 'label' => $key, ]);
+                        $recipe->metadata()->attach($metadata->id, [ 'value' => $item, ]);
                     });
 
-                    $section->recipe()->associate($recipe)->save();
+                    $sort = 0;
 
-                    $sort++;
-                });
+                    collect($recipeData['ingredients'])->each(function ($item, $key) use ($recipe, &$sort) {
+                        $section = IngredientSection::firstOrCreate([
+                            'recipe_id'  => $recipe->id,
+                            'label'      => $key,
+                            'sort_order' => $sort,
+                        ]);
+                        
+                        collect($item)->each(function ($ingredient) use ($section) {
+                            $section->ingredients()->create([ 'body' => $ingredient, ]);
+                        });
 
-                collect($recipeData['method'])->each(function ($item, $key) use ($recipe) {
-                    $recipe->method()->create([ 'body' => $item, 'sort_order' => $key, ]);
-                });
+                        $section->recipe()->associate($recipe)->save();
 
-                $this->info(sprintf('[%s] Processed recipe %s', date('Y-m-d H:i:s'), $recipe->name));
+                        $sort++;
+                    });
+
+                    collect($recipeData['method'])->each(function ($item, $key) use ($recipe) {
+                        $recipe->method()->create([ 'body' => $item, 'sort_order' => $key, ]);
+                    });
+
+                    $this->info(sprintf('[%s] Processed recipe %s', date('Y-m-d H:i:s'), $recipe->name));
+                } catch (Exception $e) {
+                    $this->info(sprintf('[%s] Exception parsing data. Retrying later.', date('Y-m-d H:i:s')), [
+                        'exception'  => $e->getMessage(),
+                        'recipe_url' => $recipeUrl,
+                    ]);
+                }
             });
     }
 
