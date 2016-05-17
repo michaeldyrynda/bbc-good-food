@@ -211,15 +211,21 @@ class ScrapeBbcFood extends Command
     {
         $ingredients = [];
 
-        $this->crawler->filter('.recipe-ingredients h3')->each(function ($node) use (&$ingredients) {
-            $ingredients[$node->text()] = $node->nextAll()
-                ->filter('.recipe-ingredients__list')
-                ->first()
-                ->filter('.recipe-ingredients__list-item')
-                ->each(function ($ingredient) {
-                    return trim($ingredient->text());
-                });
-        });
+        if ($this->crawler->filter('.recipe-ingredients h3')->count()) {
+            $this->crawler->filter('.recipe-ingredients h3')->each(function ($node) use (&$ingredients) {
+                $ingredients[$node->text()] = $node->nextAll()
+                    ->filter('.recipe-ingredients__list')
+                    ->first()
+                    ->filter('.recipe-ingredients__list-item')
+                    ->each(function ($ingredient) {
+                        return trim($ingredient->text());
+                    });
+            });
+        } else {
+            $ingredients[''] = $this->crawler->filter('.recipe-ingredients .recipe-ingredients__list-item')->each(function ($ingredient) {
+                return trim($ingredient->text());
+            });
+        }
 
         return $ingredients;
     }
