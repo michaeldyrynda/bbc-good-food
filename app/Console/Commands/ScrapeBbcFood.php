@@ -194,9 +194,11 @@ class ScrapeBbcFood extends Command
 
     protected function chef()
     {
+        $image = $this->crawler->filter('.recipe-chef .chef .chef__image-link .chef__image');
+
         return [
             'name'  => $this->crawler->filter('.recipe-chef .chef .chef__about .chef__name .chef__link')->first()->text(),
-            'image' => $this->crawler->filter('.recipe-chef .chef .chef__image-link .chef__image')->attr('src'),
+            'image' => $image->count() ? $image->attr('src') : null,
         ];
     }
 
