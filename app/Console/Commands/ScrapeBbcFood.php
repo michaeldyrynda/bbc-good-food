@@ -95,7 +95,7 @@ class ScrapeBbcFood extends Command
                     });
 
                     $this->info(sprintf('[%s] Processed recipe %s', date('Y-m-d H:i:s'), $recipe->name));
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     $this->info(sprintf('[%s] Exception parsing data. Retrying later.', date('Y-m-d H:i:s')), [
                         'exception'  => $e->getMessage(),
                         'recipe_url' => $recipeUrl,
