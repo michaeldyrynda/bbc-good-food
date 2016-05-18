@@ -54,6 +54,8 @@ class ScrapeBbcFood extends Command
 
                     $recipe = Recipe::create([
                         'name'        => $recipeData['name'],
+                        'image'       => $recipeData['image'],
+                        'description' => $recipeData['description'],
                         'fingerprint' => $recipeData['fingerprint'],
                         'source_url'  => $recipeData['source_url'],
                     ]);
