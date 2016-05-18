@@ -63,11 +63,13 @@ class ScrapeBbcFood extends Command
                         $recipe->show()->attach($show->id);
                     }
 
-                    $chef = Chef::firstOrCreate([
-                        'name'  => $recipeData['chef']['name'],
-                        'image' => $recipeData['chef']['image'],
-                    ]);
-                    $recipe->chef()->attach($chef->id);
+                    if (! is_null($recipeData['chef'])) {
+                        $chef = Chef::firstOrCreate([
+                            'name'  => $recipeData['chef']['name'],
+                            'image' => $recipeData['chef']['image'],
+                        ]);
+                        $recipe->chef()->attach($chef->id);
+                    }
 
                     collect($recipeData['metadata'])->each(function ($item, $key) use ($recipe) {
                         $metadata = Metadata::firstOrCreate([ 'label' => $key, ]);
@@ -196,10 +198,16 @@ class ScrapeBbcFood extends Command
 
     protected function chef()
     {
+        $chef  = $this->crawler->filter('.recipe-chef .chef .chef__about');
+
+        if (! $chef->count()) {
+            return null;
+        }
+
         $image = $this->crawler->filter('.recipe-chef .chef .chef__image-link .chef__image');
 
         return [
-            'name'  => $this->crawler->filter('.recipe-chef .chef .chef__about .chef__name .chef__link')->first()->text(),
+            'name'  => $chef->filter('.chef__name .chef__link')->first()->text(),
             'image' => $image->count() ? $image->attr('src') : null,
         ];
     }
